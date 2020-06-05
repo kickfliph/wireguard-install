@@ -5,11 +5,11 @@ function addClient() {
 	source /etc/wireguard/params
 
 	if [[ $SERVER_PUB_IP =~ .*:.* ]]; then
-		echo "IPv6 Detected"
-		ENDPOINT="[$SERVER_PUB_IP]:$SERVER_PORT"
+	        echo "IPv6 Detected"
+	        ENDPOINT="[$SERVER_PUB_IP]:$SERVER_PORT"
 	else
-		echo "IPv4 Detected"
-		ENDPOINT="$SERVER_PUB_IP:$SERVER_PORT"
+	        echo "IPv4 Detected"
+	        ENDPOINT="$SERVER_PUB_IP:$SERVER_PORT"
 	fi
 
 	CLIENT_WG_IPV4="10.66.66.2"
@@ -26,8 +26,8 @@ function addClient() {
 	read -rp "Second DNS resolver to use for the client: " -e -i "$CLIENT_DNS_2" CLIENT_DNS_2
 
 	CLIENT_NAME=$(
-		head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10
-		echo ''
+	        head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10
+	        echo ''
 	)
 
 	# Generate key pair for the client
@@ -67,11 +67,6 @@ if [ "$EUID" -ne 0 ]; then
 	exit 1
 fi
 
-if [ "$(systemd-detect-virt)" == "openvz" ]; then
-	echo "OpenVZ is not supported"
-	exit
-fi
-
 if [ "$(systemd-detect-virt)" == "lxc" ]; then
 	echo "LXC is not supported (yet)."
 	echo "WireGuard can technically run in an LXC container,"
@@ -83,15 +78,12 @@ fi
 
 if [[ $1 == "add-client" ]]; then
 	if [[ -e /etc/wireguard ]]; then
-		addClient
-		exit 0
+	        addClient
+	        exit 0
 	else
-		echo "Please install WireGuard first."
-		exit 1
+	        echo "Please install WireGuard first."
+	        exit 1
 	fi
-elif [[ -e /etc/wireguard ]]; then
-	echo "WireGuard is already installed. Run with 'add-client' to add a client."
-	exit 1
 fi
 
 # Check OS version
@@ -132,35 +124,10 @@ SERVER_PORT=$(shuf -i49152-65535 -n1)
 read -rp "Server's WireGuard port: " -e -i "$SERVER_PORT" SERVER_PORT
 
 # Install WireGuard tools and module
-if [[ $OS == 'ubuntu' ]]; then
-	apt-get install -y software-properties-common
-	add-apt-repository -y ppa:wireguard/wireguard
-	apt-get update
-	apt-get install -y "linux-headers-$(uname -r)"
-	apt-get install -y wireguard iptables resolvconf qrencode
-elif [[ $OS == 'debian' ]]; then
-	echo "deb http://deb.debian.org/debian/ unstable main" >/etc/apt/sources.list.d/unstable.list
-	printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' >/etc/apt/preferences.d/limit-unstable
-	apt update
-	apt-get install -y "linux-headers-$(uname -r)"
-	apt-get install -y wireguard iptables resolvconf qrencode
-	apt-get install -y bc # mitigate https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=956869
-elif [[ $OS == 'fedora' ]]; then
-	if [[ $VERSION_ID -lt 32 ]]; then
-		dnf install -y dnf-plugins-core
-		dnf copr enable -y jdoss/wireguard
-		dnf install -y wireguard-dkms
-	fi
-	dnf install -y wireguard-tools iptables qrencode
-elif [[ $OS == 'centos' ]]; then
-	curl -Lo /etc/yum.repos.d/wireguard.repo https://copr.fedorainfracloud.org/coprs/jdoss/wireguard/repo/epel-7/jdoss-wireguard-epel-7.repo
-	yum -y install epel-release
-	yum -y install wireguard-dkms wireguard-tools iptables qrencode
-elif [[ $OS == 'arch' ]]; then
-	pacman -S --noconfirm linux-headers
-	pacman -S --noconfirm wireguard-tools iptables wireguard-arch qrencode
-fi
+#############################################################################################
 
+
+#############################################################################################
 # Make sure the directory exists (this does not seem the be the case on fedora)
 mkdir /etc/wireguard >/dev/null 2>&1
 
@@ -209,18 +176,5 @@ systemctl enable "wg-quick@$SERVER_WG_NIC"
 # Check if WireGuard is running
 systemctl is-active --quiet "wg-quick@$SERVER_WG_NIC"
 WG_RUNNING=$?
-
-# Warn user about kernel version mismatch with headers
-if [[ $OS =~ (fedora|centos) ]] && [[ $WG_RUNNING -ne 0 ]]; then
-	echo -e "\nWARNING: WireGuard does not seem to be running."
-	echo "Due to kernel mismatch issues on $OS, WireGuard might work if your system is out of date."
-	echo "You can check if WireGuard is running with: systemctl status wg-quick@$SERVER_WG_NIC"
-	echo 'If you get something like "Cannot find device wg0", please run:'
-	if [[ $OS == 'fedora' ]]; then
-		echo "dnf update -y && reboot"
-	elif [[ $OS == 'centos' ]]; then
-		echo "yum update -y && reboot"
-	fi
-fi
 
 addClient
