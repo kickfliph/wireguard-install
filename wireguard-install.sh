@@ -1,4 +1,3 @@
-#!/bin/bash
 golan=go1.14.4.linux-amd64.tar.gz
 
 # Discard stdin. Needed when running from an one-liner which includes a newline
@@ -20,16 +19,20 @@ fi
 # $os_version variables aren't always in use, but are kept here for convenience
 if grep -qs "ubuntu" /etc/os-release; then
 	os="ubuntu"
-	os_version=$(grep 'VERSION_ID' /etc/os-release | cut -d '"' -f 2 | tr -d '.')
+	os_version=$(grep 'VERSION_ID' /etc/os-release | cut -d '"' -f 2 | tr -d '.')i
+	apt-get install git build-essential wget -y
 elif [[ -e /etc/debian_version ]]; then
 	os="debian"
 	os_version=$(grep -oE '[0-9]+' /etc/debian_version | head -1)
+	apt-get install git build-essential wget -y
 elif [[ -e /etc/centos-release ]]; then
 	os="centos"
 	os_version=$(grep -oE '[0-9]+' /etc/centos-release | head -1)
+	yum install gcc gcc-c++ kernel-devel make
 elif [[ -e /etc/fedora-release ]]; then
 	os="fedora"
 	os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
+	yum install gcc gcc-c++ kernel-devel make
 else
 	echo "This installer seems to be running on an unsupported distribution.
 Supported distributions are Ubuntu, Debian, CentOS, and Fedora."
@@ -81,8 +84,6 @@ virt_envr () {
 	echo "WireGuard-go will be install"
 	echo '=============================================================================================='
 
-	apt-get install git build-essential wget -y
-
 	###Go instalation ###
 	cd /tmp && wget https://dl.google.com/go/$golan
 	echo '=============================================================================================='
@@ -100,6 +101,8 @@ virt_envr () {
 	cd /usr/local/src
 	sudo git clone git://git.zx2c4.com/wireguard-go
 	cd /usr/local/src/wireguard-go
+	sed -i 's|(1 << 16) - 1 // largest possible UDP datagram|1700|g' /usr/local/src/wireguard-go/device/queueconstants_default.go
+	sed -i 's|0             // Disable and allow for infinite memory growth|1024|g' /usr/local/src/wireguard-go/device/queueconstants_default.go
 	make
 	sudo cp wireguard-go /usr/local/bin
 	echo '=============================================================================================='
@@ -123,30 +126,30 @@ new_client_dns () {
 	        # DNS
 	case "$dns" in
 	        1|"")
-		                # Locate the proper resolv.conf
-		                # Needed for systems running systemd-resolved
-		                if grep -q '^nameserver 127.0.0.53' "/etc/resolv.conf"; then
-		                        resolv_conf="/run/systemd/resolve/resolv.conf"
-		                else
-		                        resolv_conf="/etc/resolv.conf"
-		                fi
-		                # Extract nameservers and provide them in the required format
-		                dns=$(grep -v '^#\|^;' "$resolv_conf" | grep '^nameserver' | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | xargs | sed -e 's/ /, /g')
+	                        # Locate the proper resolv.conf
+	                        # Needed for systems running systemd-resolved
+	                        if grep -q '^nameserver 127.0.0.53' "/etc/resolv.conf"; then
+	                                resolv_conf="/run/systemd/resolve/resolv.conf"
+	                        else
+	                                resolv_conf="/etc/resolv.conf"
+	                        fi
+	                        # Extract nameservers and provide them in the required format
+	                        dns=$(grep -v '^#\|^;' "$resolv_conf" | grep '^nameserver' | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | xargs | sed -e 's/ /, /g')
 	        ;;
 	        2)
-		                dns="8.8.8.8, 8.8.4.4"
+	                        dns="8.8.8.8, 8.8.4.4"
 	        ;;
 	        3)
-		                dns="1.1.1.1, 1.0.0.1"
+	                        dns="1.1.1.1, 1.0.0.1"
 	        ;;
 	        4)
-		                dns="208.67.222.222, 208.67.220.220"
+	                        dns="208.67.222.222, 208.67.220.220"
 	        ;;
 	        5)
-		                dns="9.9.9.9, 149.112.112.112"
+	                        dns="9.9.9.9, 149.112.112.112"
 	        ;;
 	        6)
-		                dns="176.103.130.130, 176.103.130.131"
+	                        dns="176.103.130.130, 176.103.130.131"
 	        ;;
 	esac
 }
@@ -202,8 +205,8 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 	        ip -4 addr | grep inet | grep -vE '127(\.[0-9]{1,3}){3}' | cut -d '/' -f 1 | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | nl -s ') '
 	        read -p "IPv4 address [1]: " ip_number
 	        until [[ -z "$ip_number" || "$ip_number" =~ ^[0-9]+$ && "$ip_number" -le "$number_of_ip" ]]; do
-		                echo "$ip_number: invalid selection."
-		                read -p "IPv4 address [1]: " ip_number
+	                        echo "$ip_number: invalid selection."
+	                        read -p "IPv4 address [1]: " ip_number
 	        done
 	        [[ -z "$ip_number" ]] && ip_number="1"
 	        ip=$(ip -4 addr | grep inet | grep -vE '127(\.[0-9]{1,3}){3}' | cut -d '/' -f 1 | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' | sed -n "$ip_number"p)
@@ -217,8 +220,8 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 	        read -p "Public IPv4 address / hostname [$get_public_ip]: " public_ip
 	        # If the checkip service is unavailable and user didn't provide input, ask again
 	        until [[ -n "$get_public_ip" || -n "$public_ip" ]]; do
-		                echo "Invalid input."
-		                read -p "Public IPv4 address / hostname: " public_ip
+	                        echo "Invalid input."
+	                        read -p "Public IPv4 address / hostname: " public_ip
 	        done
 	        [[ -z "$public_ip" ]] && public_ip="$get_public_ip"
 	fi
@@ -234,8 +237,8 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 	        ip -6 addr | grep 'inet6 [23]' | cut -d '/' -f 1 | grep -oE '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}' | nl -s ') '
 	        read -p "IPv6 address [1]: " ip6_number
 	        until [[ -z "$ip6_number" || "$ip6_number" =~ ^[0-9]+$ && "$ip6_number" -le "$number_of_ip6" ]]; do
-		                echo "$ip6_number: invalid selection."
-		                read -p "IPv6 address [1]: " ip6_number
+	                        echo "$ip6_number: invalid selection."
+	                        read -p "IPv6 address [1]: " ip6_number
 	        done
 	        [[ -z "$ip6_number" ]] && ip6_number="1"
 	        ip6=$(ip -6 addr | grep 'inet6 [23]' | cut -d '/' -f 1 | grep -oE '([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}' | sed -n "$ip6_number"p)
@@ -264,13 +267,13 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 	# Install a firewall in the rare case where one is not already available
 	if ! systemctl is-active --quiet firewalld.service && ! hash iptables 2>/dev/null; then
 	        if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
-		                firewall="firewalld"
-		                # We don't want to silently enable firewalld, so we give a subtle warning
-		                # If the user continues, firewalld will be installed and enabled during setup
-		                echo "firewalld, which is required to manage routing tables, will also be installed."
+	                        firewall="firewalld"
+	                        # We don't want to silently enable firewalld, so we give a subtle warning
+	                        # If the user continues, firewalld will be installed and enabled during setup
+	                        echo "firewalld, which is required to manage routing tables, will also be installed."
 	        elif [[ "$os" == "debian" || "$os" == "ubuntu" ]]; then
-		                # iptables is way less invasive than firewalld so no warning is given
-		                firewall="iptables"
+	                        # iptables is way less invasive than firewalld so no warning is given
+	                        firewall="iptables"
 	        fi
 	fi
 	read -n1 -r -p "Press any key to continue..."
@@ -305,104 +308,104 @@ fiJGS5WoFr1yr8b7oQxTrZlCeHk3r3FJIhv2dQ==
 	# If not running inside a container, set up the WireGuard kernel module
 	if [[ ! "$is_container" -eq 0 ]]; then
 	        if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
-		                # Ubuntu 20.04 or higer
-		                apt-get update
-		                apt-get install -y wireguard qrencode $firewall
+	                        # Ubuntu 20.04 or higer
+	                        apt-get update
+	                        apt-get install -y wireguard qrencode $firewall
 	        elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
-		                # Ubuntu 18.04
-		                # Repo is added manually so we don't depend on add-apt-repository.
-		                # gnupg is required to add the repo, we install it if not already present.
-		                if ! dpkg -s gnupg &>/dev/null; then
-		                        apt-get update
-		                        apt-get install -y gnupg
-		                fi
-		                apt-key add - <<< "$ppa_key"
-		                echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu bionic main" > /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
-		                apt-get update
-		                # Try to install kernel headers for the running kernel and avoid a reboot. This
-		                # can fail, so it's important to run separately from the other apt-get command.
-		                apt-get install -y linux-headers-"$(uname -r)"
-		                # linux-headers-generic points to the latest headers. We install it because if
-		                # the system has an outdated kernel, there is no guarantee that old headers were
-		                # still downloadable and to provide suitable headers for future kernel updates.
-		                apt-get install -y linux-headers-generic
-		                apt-get install -y wireguard qrencode $firewall
+	                        # Ubuntu 18.04
+	                        # Repo is added manually so we don't depend on add-apt-repository.
+	                        # gnupg is required to add the repo, we install it if not already present.
+	                        if ! dpkg -s gnupg &>/dev/null; then
+	                                apt-get update
+	                                apt-get install -y gnupg
+	                        fi
+	                        apt-key add - <<< "$ppa_key"
+	                        echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu bionic main" > /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
+	                        apt-get update
+	                        # Try to install kernel headers for the running kernel and avoid a reboot. This
+	                        # can fail, so it's important to run separately from the other apt-get command.
+	                        apt-get install -y linux-headers-"$(uname -r)"
+	                        # linux-headers-generic points to the latest headers. We install it because if
+	                        # the system has an outdated kernel, there is no guarantee that old headers were
+	                        # still downloadable and to provide suitable headers for future kernel updates.
+	                        apt-get install -y linux-headers-generic
+	                        apt-get install -y wireguard qrencode $firewall
 	        elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
-		                # Debian 10
-		                if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
-		                        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-		                fi
-		                apt-get update
-		                # Try to install kernel headers for the running kernel and avoid a reboot. This
-		                # can fail, so it's important to run separately from the other apt-get command.
-		                apt-get install -y linux-headers-"$(uname -r)"
-		                # There are cleaner ways to find out the $architecture, but we require an
-		                # specific format for the package name and this approach provides what we need.
-		                architecture=$(dpkg --get-selections 'linux-image-*-*' | cut -f 1 | grep -oE '[^-]*$' -m 1)
-		                # linux-headers-$architecture points to the latest headers. We install it
-		                # because if the system has an outdated kernel, there is no guarantee that old
-		                # headers were still downloadable and to provide suitable headers for future
-		                # kernel updates.
-		                apt-get install -y linux-headers-"$architecture"
-		                apt-get install -y wireguard qrencode $firewall
+	                        # Debian 10
+	                        if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
+	                                echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+	                        fi
+	                        apt-get update
+	                        # Try to install kernel headers for the running kernel and avoid a reboot. This
+	                        # can fail, so it's important to run separately from the other apt-get command.
+	                        apt-get install -y linux-headers-"$(uname -r)"
+	                        # There are cleaner ways to find out the $architecture, but we require an
+	                        # specific format for the package name and this approach provides what we need.
+	                        architecture=$(dpkg --get-selections 'linux-image-*-*' | cut -f 1 | grep -oE '[^-]*$' -m 1)
+	                        # linux-headers-$architecture points to the latest headers. We install it
+	                        # because if the system has an outdated kernel, there is no guarantee that old
+	                        # headers were still downloadable and to provide suitable headers for future
+	                        # kernel updates.
+	                        apt-get install -y linux-headers-"$architecture"
+	                        apt-get install -y wireguard qrencode $firewall
 	        elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
-		                # CentOS 8
-		                dnf install -y epel-release elrepo-release
-		                dnf install -y kmod-wireguard wireguard-tools qrencode $firewall
-		                mkdir -p /etc/wireguard/
+	                        # CentOS 8
+	                        dnf install -y epel-release elrepo-release
+	                        dnf install -y kmod-wireguard wireguard-tools qrencode $firewall
+	                        mkdir -p /etc/wireguard/
 	        elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
-		                # CentOS 7
-		                yum install -y epel-release https://www.elrepo.org/elrepo-release-7.el7.elrepo.noarch.rpm
-		                yum install -y yum-plugin-elrepo
-		                yum install -y kmod-wireguard wireguard-tools qrencode $firewall
-		                mkdir -p /etc/wireguard/
+	                        # CentOS 7
+	                        yum install -y epel-release https://www.elrepo.org/elrepo-release-7.el7.elrepo.noarch.rpm
+	                        yum install -y yum-plugin-elrepo
+	                        yum install -y kmod-wireguard wireguard-tools qrencode $firewall
+	                        mkdir -p /etc/wireguard/
 	        elif [[ "$os" == "fedora" ]]; then
-		                # Fedora
-		                dnf install -y wireguard-tools qrencode $firewall
-		                mkdir -p /etc/wireguard/
+	                        # Fedora
+	                        dnf install -y wireguard-tools qrencode $firewall
+	                        mkdir -p /etc/wireguard/
 	        fi
 	# Else, we are inside a container and WireGuard-GO needs to be used
 	else
         # Install required packages
 	        if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
-		                # Ubuntu 20.04 or higer
-		                apt-get update
-		                apt-get install -y wireguard-tools qrencode ca-certificates $cron $firewall
+	                        # Ubuntu 20.04 or higer
+	                        apt-get update
+	                        apt-get install -y wireguard-tools qrencode ca-certificates $cron $firewall
 	        elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
-		                # Ubuntu 18.04
-		                # Repo is added manually so we don't depend on add-apt-repository.
-		                # gnupg is required to add the repo, we install it if not already present.
-		                if ! dpkg -s gnupg &>/dev/null; then
-		                        apt-get update
-		                        apt-get install -y gnupg
-		                fi
-		                apt-key add - <<< "$ppa_key"
-		                echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu bionic main" > /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
-		                apt-get update
-		                apt-get install -y qrencode ca-certificates $cron $firewall
-		                apt-get install -y wireguard-tools --no-install-recommends
+	                        # Ubuntu 18.04
+	                        # Repo is added manually so we don't depend on add-apt-repository.
+	                        # gnupg is required to add the repo, we install it if not already present.
+	                        if ! dpkg -s gnupg &>/dev/null; then
+	                                apt-get update
+	                                apt-get install -y gnupg
+	                        fi
+	                        apt-key add - <<< "$ppa_key"
+	                        echo "deb http://ppa.launchpad.net/wireguard/wireguard/ubuntu bionic main" > /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
+	                        apt-get update
+	                        apt-get install -y qrencode ca-certificates $cron $firewall
+	                        apt-get install -y wireguard-tools --no-install-recommends
 	        elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
-		                # Debian 10
-		                if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
-		                        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-		                fi
-		                apt-get update
-		                apt-get install -y qrencode ca-certificates $cron $firewall
-		                apt-get install -y wireguard-tools --no-install-recommends
+	                        # Debian 10
+	                        if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
+	                                echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+	                        fi
+	                        apt-get update
+	                        apt-get install -y qrencode ca-certificates $cron $firewall
+	                        apt-get install -y wireguard-tools --no-install-recommends
 	        elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
-		                # CentOS 8
-		                dnf install -y epel-release
-		                dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
-		                mkdir -p /etc/wireguard/
+	                        # CentOS 8
+	                        dnf install -y epel-release
+	                        dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
+	                        mkdir -p /etc/wireguard/
 	        elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
-		                # CentOS 7
-		                yum install -y epel-release
-		                yum install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
-		                mkdir -p /etc/wireguard/
+	                        # CentOS 7
+	                        yum install -y epel-release
+	                        yum install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
+	                        mkdir -p /etc/wireguard/
 	        elif [[ "$os" == "fedora" ]]; then
-		                # Fedora
-		                dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
-		                mkdir -p /etc/wireguard/
+	                        # Fedora
+	                        dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
+	                        mkdir -p /etc/wireguard/
 	        fi
     fi
     	# If firewalld was just installed, enable it
@@ -443,10 +446,10 @@ EOF
 	        firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
 	        firewall-cmd --permanent --direct --add-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
 	        if [[ -n "$ip6" ]]; then
-		                firewall-cmd --zone=trusted --add-source=fddd:2c4:2c4:2c4::/64
-		                firewall-cmd --permanent --zone=trusted --add-source=fddd:2c4:2c4:2c4::/64
-		                firewall-cmd --direct --add-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
-		                firewall-cmd --permanent --direct --add-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
+	                        firewall-cmd --zone=trusted --add-source=fddd:2c4:2c4:2c4::/64
+	                        firewall-cmd --permanent --zone=trusted --add-source=fddd:2c4:2c4:2c4::/64
+	                        firewall-cmd --direct --add-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
+	                        firewall-cmd --permanent --direct --add-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
 	        fi
 	else
 	        # Create a service to set up persistent iptables rules
@@ -455,8 +458,8 @@ EOF
 	        # nf_tables is not available as standard in OVZ kernels. So use iptables-legacy
 	        # if we are in OVZ, with a nf_tables backend and iptables-legacy is available.
 	        if [[ $(systemd-detect-virt) == "openvz" ]] && readlink -f "$(command -v iptables)" | grep -q "nft" && hash iptables-legacy 2>/dev/null; then
-		                iptables_path=$(command -v iptables-legacy)
-		                ip6tables_path=$(command -v ip6tables-legacy)
+	                        iptables_path=$(command -v iptables-legacy)
+	                        ip6tables_path=$(command -v ip6tables-legacy)
 	        fi
 	        echo "[Unit]
     Before=network.target
@@ -471,23 +474,23 @@ EOF
     ExecStop=$iptables_path -D FORWARD -s 10.7.0.0/24 -j ACCEPT
     ExecStop=$iptables_path -D FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT" > /etc/systemd/system/wg-iptables.service
 	        if [[ -n "$ip6" ]]; then
-		                echo "ExecStart=$ip6tables_path -t nat -A POSTROUTING -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to $ip6
-		                ExecStart=$ip6tables_path -I FORWARD -s fddd:2c4:2c4:2c4::/64 -j ACCEPT
-		                ExecStart=$ip6tables_path -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-		                ExecStop=$ip6tables_path -t nat -D POSTROUTING -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to $ip6
-		                ExecStop=$ip6tables_path -D FORWARD -s fddd:2c4:2c4:2c4::/64 -j ACCEPT
-		                ExecStop=$ip6tables_path -D FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT" >> /etc/systemd/system/wg-iptables.service
+	                        echo "ExecStart=$ip6tables_path -t nat -A POSTROUTING -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to $ip6
+	                        ExecStart=$ip6tables_path -I FORWARD -s fddd:2c4:2c4:2c4::/64 -j ACCEPT
+	                        ExecStart=$ip6tables_path -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+	                        ExecStop=$ip6tables_path -t nat -D POSTROUTING -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to $ip6
+	                        ExecStop=$ip6tables_path -D FORWARD -s fddd:2c4:2c4:2c4::/64 -j ACCEPT
+	                        ExecStop=$ip6tables_path -D FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT" >> /etc/systemd/system/wg-iptables.service
 	        fi
 	        echo "RemainAfterExit=yes
 	[Install]
     WantedBy=multi-user.target" >> /etc/systemd/system/wg-iptables.service
 	        systemctl enable --now wg-iptables.service
 	fi
+# Generates the custom client.conf
+new_client_setup
+# Enable and start the wg-quick service
+systemctl enable --now wg-quick@wg0.service
 
-	# Generates the custom client.conf
-#	new_client_setup
-	# Enable and start the wg-quick service
-#	systemctl enable --now wg-quick@wg0.service
 EOF
 	echo
 	qrencode -t UTF8 < ~/"$client.conf"
@@ -503,7 +506,7 @@ EOF
 	        elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
 	        echo "Upgrade the kernel with \"apt-get install linux-image-$architecture\" and restart."
 	        elif [[ "$os" == "centos" && "$os_version" -le 8 ]]; then
-		                echo "Reboot the system to load the most recent kernel."
+	                        echo "Reboot the system to load the most recent kernel."
 	        fi
 	else
 	        echo "Finished!"
@@ -527,168 +530,168 @@ else
 	done
 	case "$option" in
 	        1)
-		                echo
-		                echo "Provide a name for the client:"
-		                read -p "Name: " unsanitized_client
-		                # Allow a limited set of characters to avoid conflicts
-		                client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
-		                while [[ -z "$client" ]] || grep -q "^# BEGIN_PEER $client$" /etc/wireguard/wg0.conf; do
-		                        echo "$client: invalid name."
-		                        read -p "Name: " unsanitized_client
-		                        client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
-		                done
-		                echo
-		                new_client_dns
-		                new_client_setup
-		                # Append new client configuration to the WireGuard interface
-		                wg addconf wg0 <(sed -n "/^# BEGIN_PEER $client/,/^# END_PEER $client/p" /etc/wireguard/wg0.conf)
-		                echo
-		                qrencode -t UTF8 < ~/"$client.conf"
-		                echo -e '\xE2\x86\x91 That is a QR code containing your client configuration.'
-		                echo
-		                echo "$client added. Configuration available in:" ~/"$client.conf"
-		                exit
+	                        echo
+	                        echo "Provide a name for the client:"
+	                        read -p "Name: " unsanitized_client
+	                        # Allow a limited set of characters to avoid conflicts
+	                        client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
+	                        while [[ -z "$client" ]] || grep -q "^# BEGIN_PEER $client$" /etc/wireguard/wg0.conf; do
+	                                echo "$client: invalid name."
+	                                read -p "Name: " unsanitized_client
+	                                client=$(sed 's/[^0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-]/_/g' <<< "$unsanitized_client")
+	                        done
+	                        echo
+	                        new_client_dns
+	                        new_client_setup
+	                        # Append new client configuration to the WireGuard interface
+	                        wg addconf wg0 <(sed -n "/^# BEGIN_PEER $client/,/^# END_PEER $client/p" /etc/wireguard/wg0.conf)
+	                        echo
+	                        qrencode -t UTF8 < ~/"$client.conf"
+	                        echo -e '\xE2\x86\x91 That is a QR code containing your client configuration.'
+	                        echo
+	                        echo "$client added. Configuration available in:" ~/"$client.conf"
+	                        exit
 	        ;;
 	        2)
-		                # This option could be documented a bit better and maybe even be simplified
-		                # ...but what can I say, I want some sleep too
-		                number_of_clients=$(grep -c '^# BEGIN_PEER' /etc/wireguard/wg0.conf)
-		                if [[ "$number_of_clients" = 0 ]]; then
-		                        echo
-		                        echo "There are no existing clients!"
-		                        exit
-		                fi
-		                echo
-		                echo "Select the client to remove:"
-		                grep '^# BEGIN_PEER' /etc/wireguard/wg0.conf | cut -d ' ' -f 3 | nl -s ') '
-		                read -p "Client: " client_number
-		                until [[ "$client_number" =~ ^[0-9]+$ && "$client_number" -le "$number_of_clients" ]]; do
-		                        echo "$client_number: invalid selection."
-		                        read -p "Client: " client_number
-		                done
-		                client=$(grep '^# BEGIN_PEER' /etc/wireguard/wg0.conf | cut -d ' ' -f 3 | sed -n "$client_number"p)
-		                echo
-		                read -p "Confirm $client removal? [y/N]: " remove
-		                until [[ "$remove" =~ ^[yYnN]*$ ]]; do
-		                        echo "$remove: invalid selection."
-		                        read -p "Confirm $client removal? [y/N]: " remove
-		                done
-		                if [[ "$remove" =~ ^[yY]$ ]]; then
-		                        # The following is the right way to avoid disrupting other active connections:
-		                        # Remove from the live interface
-		                        wg set wg0 peer "$(sed -n "/^# BEGIN_PEER $client$/,\$p" /etc/wireguard/wg0.conf | grep -m 1 PublicKey | cut -d " " -f 3)" remove
-		                        # Remove from the configuration file
-		                        sed -i "/^# BEGIN_PEER $client/,/^# END_PEER $client/d" /etc/wireguard/wg0.conf
-		                        echo
-		                        echo "$client removed!"
-		                else
-		                        echo
-		                        echo "$client removal aborted!"
-		                fi
-		                exit
+	                        # This option could be documented a bit better and maybe even be simplified
+	                        # ...but what can I say, I want some sleep too
+	                        number_of_clients=$(grep -c '^# BEGIN_PEER' /etc/wireguard/wg0.conf)
+	                        if [[ "$number_of_clients" = 0 ]]; then
+	                                echo
+	                                echo "There are no existing clients!"
+	                                exit
+	                        fi
+	                        echo
+	                        echo "Select the client to remove:"
+	                        grep '^# BEGIN_PEER' /etc/wireguard/wg0.conf | cut -d ' ' -f 3 | nl -s ') '
+	                        read -p "Client: " client_number
+	                        until [[ "$client_number" =~ ^[0-9]+$ && "$client_number" -le "$number_of_clients" ]]; do
+	                                echo "$client_number: invalid selection."
+	                                read -p "Client: " client_number
+	                        done
+	                        client=$(grep '^# BEGIN_PEER' /etc/wireguard/wg0.conf | cut -d ' ' -f 3 | sed -n "$client_number"p)
+	                        echo
+	                        read -p "Confirm $client removal? [y/N]: " remove
+	                        until [[ "$remove" =~ ^[yYnN]*$ ]]; do
+	                                echo "$remove: invalid selection."
+	                                read -p "Confirm $client removal? [y/N]: " remove
+	                        done
+	                        if [[ "$remove" =~ ^[yY]$ ]]; then
+	                                # The following is the right way to avoid disrupting other active connections:
+	                                # Remove from the live interface
+	                                wg set wg0 peer "$(sed -n "/^# BEGIN_PEER $client$/,\$p" /etc/wireguard/wg0.conf | grep -m 1 PublicKey | cut -d " " -f 3)" remove
+	                                # Remove from the configuration file
+	                                sed -i "/^# BEGIN_PEER $client/,/^# END_PEER $client/d" /etc/wireguard/wg0.conf
+	                                echo
+	                                echo "$client removed!"
+	                        else
+	                                echo
+	                                echo "$client removal aborted!"
+	                        fi
+	                        exit
 	        ;;
 	        3)
-		                echo
-		                read -p "Confirm WireGuard removal? [y/N]: " remove
-		                until [[ "$remove" =~ ^[yYnN]*$ ]]; do
-		                        echo "$remove: invalid selection."
-		                        read -p "Confirm WireGuard removal? [y/N]: " remove
-		                done
-		                if [[ "$remove" =~ ^[yY]$ ]]; then
-		                        port=$(grep '^ListenPort' /etc/wireguard/wg0.conf | cut -d " " -f 3)
-		                        if systemctl is-active --quiet firewalld.service; then
-			                                ip=$(firewall-cmd --direct --get-rules ipv4 nat POSTROUTING | grep '\-s 10.7.0.0/24 '"'"'!'"'"' -d 10.7.0.0/24' | grep -oE '[^ ]+$')
-			                                # Using both permanent and not permanent rules to avoid a firewalld reload.
-			                                firewall-cmd --remove-port="$port"/udp
-			                                firewall-cmd --zone=trusted --remove-source=10.7.0.0/24
-			                                firewall-cmd --permanent --remove-port="$port"/udp
-			                                firewall-cmd --permanent --zone=trusted --remove-source=10.7.0.0/24
-			                                firewall-cmd --direct --remove-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
-			                                firewall-cmd --permanent --direct --remove-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
-			                                if grep -qs 'fddd:2c4:2c4:2c4::1/64' /etc/wireguard/wg0.conf; then
-			                                        ip6=$(firewall-cmd --direct --get-rules ipv6 nat POSTROUTING | grep '\-s fddd:2c4:2c4:2c4::/64 '"'"'!'"'"' -d fddd:2c4:2c4:2c4::/64' | grep -oE '[^ ]+$')
-			                                        firewall-cmd --zone=trusted --remove-source=fddd:2c4:2c4:2c4::/64
-			                                        firewall-cmd --permanent --zone=trusted --remove-source=fddd:2c4:2c4:2c4::/64
-			                                        firewall-cmd --direct --remove-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
-			                                        firewall-cmd --permanent --direct --remove-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
-			                                fi
-		                        else
-			                                systemctl disable --now wg-iptables.service
-			                                rm -f /etc/systemd/system/wg-iptables.service
-		                        fi
-		                        systemctl disable --now wg-quick@wg0.service
-		                        rm -f /etc/systemd/system/wg-quick@wg0.service.d/boringtun.conf
-		                        rm -f /etc/sysctl.d/30-wireguard-forward.conf
-		                        # Different packages were installed if the system was containerized or not
-		                        if [[ ! "$is_container" -eq 0 ]]; then
-			                                if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
-			                                        # Ubuntu 20.04 or higher
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard wireguard-tools
-			                                elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
-			                                        # Ubuntu 18.04
-			                                        rm -f /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
-			                                        apt-key del E1B39B6EF6DDB96564797591AE33835F504A1A25
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard wireguard-dkms wireguard-tools
-			                                elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
-			                                        # Debian 10
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard wireguard-dkms wireguard-tools
-			                                elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
-			                                        # CentOS 8
-			                                        rm -rf /etc/wireguard/
-			                                        dnf remove -y kmod-wireguard wireguard-tools
-			                                elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
-			                                        # CentOS 7
-			                                        rm -rf /etc/wireguard/
-			                                        yum remove -y kmod-wireguard wireguard-tools
-			                                elif [[ "$os" == "fedora" ]]; then
-			                                        # Fedora
-			                                        rm -rf /etc/wireguard/
-			                                        dnf remove -y wireguard-tools
-			                                fi
-		                        else
-			                                { crontab -l 2>/dev/null | grep -v '/usr/local/sbin/boringtun-upgrade' ; } | crontab -
-			                                if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
-			                                        # Ubuntu 20.04 or higher
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard-tools
-			                                elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
-			                                        # Ubuntu 18.04
-			                                        rm -f /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
-			                                        apt-key del E1B39B6EF6DDB96564797591AE33835F504A1A25
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard-tools
-			                                elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
-			                                        # Debian 10
-			                                        rm -rf /etc/wireguard/
-			                                        apt-get remove --purge -y wireguard-tools
-			                                elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
-			                                        # CentOS 8
-			                                        rm -rf /etc/wireguard/
-			                                        dnf remove -y wireguard-tools
-			                                elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
-			                                        # CentOS 7
-			                                        rm -rf /etc/wireguard/
-			                                        yum remove -y wireguard-tools
-			                                elif [[ "$os" == "fedora" ]]; then
-			                                        # Fedora
-			                                        rm -rf /etc/wireguard/
-			                                        dnf remove -y wireguard-tools
-			                                fi
-			                                rm -f /usr/local/sbin/boringtun /usr/local/sbin/boringtun-upgrade
-		                        fi
-		                        echo
-		                        echo "WireGuard removed!"
-		                else
-		                        echo
-		                        echo "WireGuard removal aborted!"
-		                fi
-		                exit
+	                        echo
+	                        read -p "Confirm WireGuard removal? [y/N]: " remove
+	                        until [[ "$remove" =~ ^[yYnN]*$ ]]; do
+	                                echo "$remove: invalid selection."
+	                                read -p "Confirm WireGuard removal? [y/N]: " remove
+	                        done
+	                        if [[ "$remove" =~ ^[yY]$ ]]; then
+	                                port=$(grep '^ListenPort' /etc/wireguard/wg0.conf | cut -d " " -f 3)
+	                                if systemctl is-active --quiet firewalld.service; then
+		                                                ip=$(firewall-cmd --direct --get-rules ipv4 nat POSTROUTING | grep '\-s 10.7.0.0/24 '"'"'!'"'"' -d 10.7.0.0/24' | grep -oE '[^ ]+$')
+		                                                # Using both permanent and not permanent rules to avoid a firewalld reload.
+		                                                firewall-cmd --remove-port="$port"/udp
+		                                                firewall-cmd --zone=trusted --remove-source=10.7.0.0/24
+		                                                firewall-cmd --permanent --remove-port="$port"/udp
+		                                                firewall-cmd --permanent --zone=trusted --remove-source=10.7.0.0/24
+		                                                firewall-cmd --direct --remove-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
+		                                                firewall-cmd --permanent --direct --remove-rule ipv4 nat POSTROUTING 0 -s 10.7.0.0/24 ! -d 10.7.0.0/24 -j SNAT --to "$ip"
+		                                                if grep -qs 'fddd:2c4:2c4:2c4::1/64' /etc/wireguard/wg0.conf; then
+		                                                        ip6=$(firewall-cmd --direct --get-rules ipv6 nat POSTROUTING | grep '\-s fddd:2c4:2c4:2c4::/64 '"'"'!'"'"' -d fddd:2c4:2c4:2c4::/64' | grep -oE '[^ ]+$')
+		                                                        firewall-cmd --zone=trusted --remove-source=fddd:2c4:2c4:2c4::/64
+		                                                        firewall-cmd --permanent --zone=trusted --remove-source=fddd:2c4:2c4:2c4::/64
+		                                                        firewall-cmd --direct --remove-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
+		                                                        firewall-cmd --permanent --direct --remove-rule ipv6 nat POSTROUTING 0 -s fddd:2c4:2c4:2c4::/64 ! -d fddd:2c4:2c4:2c4::/64 -j SNAT --to "$ip6"
+		                                                fi
+	                                else
+		                                                systemctl disable --now wg-iptables.service
+		                                                rm -f /etc/systemd/system/wg-iptables.service
+	                                fi
+	                                systemctl disable --now wg-quick@wg0.service
+	                                rm -f /etc/systemd/system/wg-quick@wg0.service.d/boringtun.conf
+	                                rm -f /etc/sysctl.d/30-wireguard-forward.conf
+	                                # Different packages were installed if the system was containerized or not
+	                                if [[ ! "$is_container" -eq 0 ]]; then
+		                                                if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
+		                                                        # Ubuntu 20.04 or higher
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard wireguard-tools
+		                                                elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
+		                                                        # Ubuntu 18.04
+		                                                        rm -f /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
+		                                                        apt-key del E1B39B6EF6DDB96564797591AE33835F504A1A25
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard wireguard-dkms wireguard-tools
+		                                                elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
+		                                                        # Debian 10
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard wireguard-dkms wireguard-tools
+		                                                elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
+		                                                        # CentOS 8
+		                                                        rm -rf /etc/wireguard/
+		                                                        dnf remove -y kmod-wireguard wireguard-tools
+		                                                elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
+		                                                        # CentOS 7
+		                                                        rm -rf /etc/wireguard/
+		                                                        yum remove -y kmod-wireguard wireguard-tools
+		                                                elif [[ "$os" == "fedora" ]]; then
+		                                                        # Fedora
+		                                                        rm -rf /etc/wireguard/
+		                                                        dnf remove -y wireguard-tools
+		                                                fi
+	                                else
+		                                                { crontab -l 2>/dev/null | grep -v '/usr/local/sbin/boringtun-upgrade' ; } | crontab -
+		                                                if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
+		                                                        # Ubuntu 20.04 or higher
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard-tools
+		                                                elif [[ "$os" == "ubuntu" && "$os_version" -eq 1804 ]]; then
+		                                                        # Ubuntu 18.04
+		                                                        rm -f /etc/apt/sources.list.d/wireguard-ubuntu-wireguard-bionic.list
+		                                                        apt-key del E1B39B6EF6DDB96564797591AE33835F504A1A25
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard-tools
+		                                                elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
+		                                                        # Debian 10
+		                                                        rm -rf /etc/wireguard/
+		                                                        apt-get remove --purge -y wireguard-tools
+		                                                elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
+		                                                        # CentOS 8
+		                                                        rm -rf /etc/wireguard/
+		                                                        dnf remove -y wireguard-tools
+		                                                elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
+		                                                        # CentOS 7
+		                                                        rm -rf /etc/wireguard/
+		                                                        yum remove -y wireguard-tools
+		                                                elif [[ "$os" == "fedora" ]]; then
+		                                                        # Fedora
+		                                                        rm -rf /etc/wireguard/
+		                                                        dnf remove -y wireguard-tools
+		                                                fi
+		                                                rm -f /usr/local/sbin/boringtun /usr/local/sbin/boringtun-upgrade
+	                                fi
+	                                echo
+	                                echo "WireGuard removed!"
+	                        else
+	                                echo
+	                                echo "WireGuard removal aborted!"
+	                        fi
+	                        exit
 	        ;;
 	        4)
-		                exit
+	                        exit
 	        ;;
 	esac
 fi
