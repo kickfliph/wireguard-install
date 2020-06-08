@@ -1,3 +1,5 @@
+#!/bin/bash
+
 golan=go1.14.4.linux-amd64.tar.gz
 
 # Discard stdin. Needed when running from an one-liner which includes a newline
