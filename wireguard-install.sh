@@ -491,7 +491,6 @@ new_client_setup
 # Enable and start the wg-quick service
 systemctl enable --now wg-quick@wg0.service
 
-EOF
 	echo
 	qrencode -t UTF8 < ~/"$client.conf"
 	echo -e '\xE2\x86\x91 That is a QR code containing the client configuration.'
