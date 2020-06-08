@@ -4,7 +4,7 @@ THis is bash script that automate the [WireGuard](https://www.wireguard.com/) se
 
 The server will apply NAT to the client's traffic so it will appear as if the client is browsing the web with the server's IP,The script supports both IPv4 and IPv6. 
 
-This script is a folk of https://github.com/Nyr/wireguard-install code, where I'm [WireGuard-GO](https://github.com/WireGuard/wireguard-go) and for the virtual environment 
+This script is a folk of https://github.com/Nyr/wireguard-install code, where I'm using [WireGuard-GO](https://github.com/WireGuard/wireguard-go) for the virtual environment implementation.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ Supported distributions:
 
 ## Usage
 
-Download and execute the script. Answer the questions asked by the script and it will take care of the rest, make sure login as root.
+Download and execute the script. answer the questions asked by the script and it will take care of the rest, make sure login as root.
 
 ```git clone https://github.com/kickfliph/wireguard-install.git```
 
