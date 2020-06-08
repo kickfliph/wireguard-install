@@ -19,8 +19,10 @@ Supported distributions:
 
 Download and execute the script. Answer the questions asked by the script and it will take care of the rest, make sure login as root.
 
-```curl -O https://github.com/kickfliph/wireguard-install/blob/master/wireguard-install.sh```
+```git clone https://github.com/kickfliph/wireguard-install.git```
+
 ```chmod +x wireguard-install.sh```
+
 ```./wireguard-install.sh```
 
 It will install WireGuard (kernel module and tools) on the server, configure it, create a systemd service and a client configuration file with QR. 
