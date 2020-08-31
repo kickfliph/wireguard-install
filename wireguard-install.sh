@@ -19,46 +19,51 @@ fi
 
 # Detect OS
 # $os_version variables aren't always in use, but are kept here for convenience
-if grep -qs "ubuntu" /etc/os-release; then
-	os="ubuntu"
-	os_version=$(grep 'VERSION_ID' /etc/os-release | cut -d '"' -f 2 | tr -d '.')i
-	apt-get install git build-essential wget -y
-elif [[ -e /etc/debian_version ]]; then
-	os="debian"
-	os_version=$(grep -oE '[0-9]+' /etc/debian_version | head -1)
-	apt-get install git build-essential wget -y
-elif [[ -e /etc/centos-release ]]; then
-	os="centos"
-	os_version=$(grep -oE '[0-9]+' /etc/centos-release | head -1)
-	yum install gcc gcc-c++ kernel-devel make
-elif [[ -e /etc/fedora-release ]]; then
-	os="fedora"
-	os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
-	yum install gcc gcc-c++ kernel-devel make
+if `uname -a | grep -qs arm`; then
+	`chmod 755 ./rpi.sh`
+	`./rpi.sh`
+	arm=1
 else
-	echo "This installer seems to be running on an unsupported distribution.
-Supported distributions are Ubuntu, Debian, CentOS, and Fedora."
-	exit
-fi
+	if grep -qs "ubuntu" /etc/os-release; then
+		os="ubuntu"
+		os_version=$(grep 'VERSION_ID' /etc/os-release | cut -d '"' -f 2 | tr -d '.')
+		apt-get install git build-essential wget -y
+	elif [[ -e /etc/debian_version ]]; then
+		os="debian"
+		os_version=$(grep -oE '[0-9]+' /etc/debian_version | head -1)
+		apt-get install git build-essential wget -y
+	elif [[ -e /etc/centos-release ]]; then
+		os="centos"
+		os_version=$(grep -oE '[0-9]+' /etc/centos-release | head -1)
+		yum install gcc gcc-c++ kernel-devel make
+	elif [[ -e /etc/fedora-release ]]; then
+		os="fedora"
+		os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
+		yum install gcc gcc-c++ kernel-devel make
+	else
+		echo "This installer seems to be running on an unsupported distribution.
+	Supported distributions are Ubuntu, Debian, CentOS, and Fedora."
+		exit
+	fi
 
-if [[ "$os" == "ubuntu" && "$os_version" -lt 1804 ]]; then
-	echo "Ubuntu 18.04 or higher is required to use this installer.
-This version of Ubuntu is too old and unsupported."
-	exit
-fi
+	if [[ "$os" == "ubuntu" && "$os_version" -lt 1804 ]]; then
+		echo "Ubuntu 18.04 or higher is required to use this installer.
+	This version of Ubuntu is too old and unsupported."
+		exit
+	fi
 
-if [[ "$os" == "debian" && "$os_version" -lt 10 ]]; then
-	echo "Debian 10 or higher is required to use this installer.
-This version of Debian is too old and unsupported."
-	exit
-fi
+	if [[ "$os" == "debian" && "$os_version" -lt 10 ]]; then
+		echo "Debian 10 or higher is required to use this installer.
+	This version of Debian is too old and unsupported."
+		exit
+	fi
 
-if [[ "$os" == "centos" && "$os_version" -lt 7 ]]; then
-	echo "CentOS 7 or higher is required to use this installer.
-This version of CentOS is too old and unsupported."
-	exit
+	if [[ "$os" == "centos" && "$os_version" -lt 7 ]]; then
+		echo "CentOS 7 or higher is required to use this installer.
+	This version of CentOS is too old and unsupported."
+		exit
+	fi
 fi
-
 # Detect environments where $PATH does not include the sbin directories
 if ! grep -q sbin <<< "$PATH"; then
 	echo '$PATH does not include sbin. Try using "su -" instead of "su".'
@@ -307,6 +312,9 @@ bufG+23D72u9enVZT+L4zH666hdQ6zyM0lrYcrBfPPnZkrQxBIilpvlOdLYDieUE
 fiJGS5WoFr1yr8b7oQxTrZlCeHk3r3FJIhv2dQ==
 =3EYq
 -----END PGP PUBLIC KEY BLOCK-----'
+
+if $arm != 1; then
+
 	# If not running inside a container, set up the WireGuard kernel module
 	if [[ ! "$is_container" -eq 0 ]]; then
 	        if [[ "$os" == "ubuntu" && "$os_version" -ge 2004 ]]; then
@@ -414,6 +422,8 @@ fiJGS5WoFr1yr8b7oQxTrZlCeHk3r3FJIhv2dQ==
     if [[ "$firewall" == "firewalld" ]]; then
 	        systemctl enable --now firewalld.service
     fi
+
+fi    
     # Generate wg0.conf
     cat << EOF > /etc/wireguard/wg0.conf
 # Do not alter the commented lines
