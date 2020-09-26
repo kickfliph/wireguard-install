@@ -1,6 +1,7 @@
 #!/bin/bash
 
 golan=go1.14.4.linux-amd64.tar.gz
+arm=0
 
 # Discard stdin. Needed when running from an one-liner which includes a newline
 read -N 999999 -t 0.001
@@ -19,7 +20,7 @@ fi
 
 # Detect OS
 # $os_version variables aren't always in use, but are kept here for convenience
-if `uname -a | grep -qs arm`; then
+if [[`uname -a | grep -qs arm`]]; then
 	`chmod 755 ./rpi.sh`
 	`./rpi.sh`
 	arm=1
@@ -313,7 +314,10 @@ fiJGS5WoFr1yr8b7oQxTrZlCeHk3r3FJIhv2dQ==
 =3EYq
 -----END PGP PUBLIC KEY BLOCK-----'
 
-if $arm != 1; then
+
+echo "CHECKING $arm"
+
+if [[ "$arm" -eq 0 ]]; then
 
 	# If not running inside a container, set up the WireGuard kernel module
 	if [[ ! "$is_container" -eq 0 ]]; then
