@@ -1,6 +1,6 @@
 #!/bin/bash
 
-golan=go1.14.4.linux-amd64.tar.gz
+golan=go1.16.linux-amd64.tar.gz
 arm=0
 
 # Discard stdin. Needed when running from an one-liner which includes a newline
@@ -346,22 +346,31 @@ if [[ "$arm" -eq 0 ]]; then
 	                        apt-get install -y wireguard qrencode $firewall
 	        elif [[ "$os" == "debian" && "$os_version" -eq 10 ]]; then
 	                        # Debian 10
-	                        if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
-	                                echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
-	                        fi
+	                        ##if ! grep -qs '^deb .* buster-backports main' /etc/apt/sources.list /etc/apt/sources.list.d/*.list; then
+	                        ##        echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+	                        ##fi
 	                        apt-get update
 	                        # Try to install kernel headers for the running kernel and avoid a reboot. This
-	                        # can fail, so it's important to run separately from the other apt-get command.
-	                        apt-get install -y linux-headers-"$(uname -r)"
+	                        ### can fail, so it's important to run separately from the other apt-get command.
+	                        ##apt-get install -y linux-headers-"$(uname -r)"
 	                        # There are cleaner ways to find out the $architecture, but we require an
 	                        # specific format for the package name and this approach provides what we need.
-	                        architecture=$(dpkg --get-selections 'linux-image-*-*' | cut -f 1 | grep -oE '[^-]*$' -m 1)
+	                        ##architecture=$(dpkg --get-selections 'linux-image-*-*' | cut -f 1 | grep -oE '[^-]*$' -m 1)
 	                        # linux-headers-$architecture points to the latest headers. We install it
 	                        # because if the system has an outdated kernel, there is no guarantee that old
 	                        # headers were still downloadable and to provide suitable headers for future
 	                        # kernel updates.
-	                        apt-get install -y linux-headers-"$architecture"
-	                        apt-get install -y wireguard qrencode $firewall
+	                        ##apt-get install -y linux-headers-"$architecture"
+	                        ##apt-get install -y wireguard qrencode $firewall
+                            sudo apt-get install libelf-dev linux-headers-$(uname -r) build-essential pkg-configi
+                            cd /opt
+                            sudo git clone https://git.zx2c4.com/wireguard-linux-compat
+                            sudo git clone https://git.zx2c4.com/wireguard-tools
+                            sudo make -C wireguard-linux-compat/src -j$(nproc)
+                            sudo make -C wireguard-linux-compat/src install
+                            sudo make -C wireguard-tools/src -j$(nproc)
+                            sudo make -C wireguard-tools/src install
+                            #this is what I have added 
 	        elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
 	                        # CentOS 8
 	                        dnf install -y epel-release elrepo-release
